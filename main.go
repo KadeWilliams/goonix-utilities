@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"slices"
 	"strings"
 )
 
@@ -114,8 +115,25 @@ func sort(path string) {
 
 	for i := range lines {
 		fmt.Printf("Outer: %s\n", lines[i])
+		if len(sortedLines) == 0 {
+			sortedLines = append(sortedLines, lines[i])
+			continue
+		}
+
 		for j := range lines {
 			fmt.Printf("\tInner:%s\n", lines[j])
+
+			if lines[i] < lines[j] {
+				fmt.Printf("\nInserted %s @ %d", lines[i], j)
+				sortedLines = slices.Insert(sortedLines, j, lines[i])
+			}
+
+			/*
+				if outer <= inner 
+					insert at current index of outer int sorted
+				else if outer > inner 
+					continue the loop
+			*/
 		}
 		
 
