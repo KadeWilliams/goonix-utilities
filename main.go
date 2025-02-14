@@ -2,10 +2,10 @@ package main
 
 import (
 	"bufio"
-	"bytes"
 	"fmt"
-	"io"
+	"log"
 	"os"
+	"os/exec"
 	"strings"
 )
 
@@ -20,7 +20,7 @@ func cat(path string) {
 	}
 }
 
-func ls (path string) {
+func ls(path string) {
 	if path == "." {
 		path, _ = os.Getwd()
 	}
@@ -46,27 +46,153 @@ func grep(value, path string) {
 	}
 }
 
-func wc(path string) {
-	fileInfo, err := os.Stat(path)
-	if err != nil {
-		panic(err)
+const pageSize = 24
+func less(path string) {
+	f, _ := os.Open(path)
+	defer f.Close()
+
+	scanner := bufio.NewScanner(f);
+	lines := []string{}
+	for scanner.Scan() {
+		lines = append(lines, scanner.Text())
 	}
-	fileInfo.Size()
 
-	buf := make([]byte, 32*1024)
-	count := 0
-	lineSep := []byte{'\n'}
-	r, _ := os.Open(path)
+	currentLine := 0
 	for {
-		c, err := r.Read(buf)
-		count += bytes.Count(buf[:c], lineSep)
+		clearScreen()
+		for i := currentLine; i < currentLine+pageSize && i < len(lines); i++ {
+			fmt.Println(lines[i])
+		}
+		fmt.Printf("\n-- More -- (Line %d of %d)", currentLine + 1, len(lines))
 
-		switch {
-		case err == io.EOF:
-			fmt.Println(count)
-			break
+		input := waitForInput()
+
+		switch input {
+		case "q":
+			return
+		case " ":
+			currentLine += pageSize
+			if currentLine >= len(lines) {
+				currentLine = len(lines) - 1
+			}
+		case "b": 
+			currentLine -= pageSize 
+			if currentLine < 0 {
+				currentLine = 0
+			}
 		}
 	}
+}
+
+func clearScreen() {
+	cmd := exec.Command("clear")
+	cmd.Stdout = os.Stdout
+	cmd.Run()
+}
+
+func waitForInput() string {
+	reader := bufio.NewReader(os.Stdin) 
+	input, _ := reader.ReadString('\n')
+	return string(input[0])
+}
+
+func sort(path string) {
+	file, err := os.Open(path)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+
+	lines := []string{}
+	for scanner.Scan() {
+		lines = append(lines, scanner.Text())
+	}
+
+	sortedLines := []string{}
+
+	for i := range lines {
+		fmt.Printf("Outer: %s\n", lines[i])
+		for j := range lines {
+			fmt.Printf("\tInner:%s\n", lines[j])
+		}
+		
+
+		// if len(sortedLines) < 1 {
+		// 	sortedLines = append(sortedLines, lines[i])
+		// 	continue
+		// }
+
+		// // TODO need to make it work when the characters are the same in pos 1 
+		// for j := range sortedLines {
+		// 	fmt.Printf("comparing %s to %s\n", lines[i], sortedLines[j])
+		// 	if sortedLines[j] > lines[i] {
+		// 		fmt.Printf("Inserting %s @ %d\n", lines[j], j)
+		// 		sortedLines = slices.Insert(sortedLines, j, lines[j])
+		// 		// sortedLines = append([]string{lines[i]}, sortedLines...)
+		// 		// continue
+		// 	} else {
+		// 		fmt.Printf("Inserting %s @ %d\n", lines[i], i)
+		// 		sortedLines = slices.Insert(sortedLines, i, lines[i])
+		// 		break
+		// 	}
+		// 	// fmt.Printf("Appending %s\n", lines[i])
+		// 	// sortedLines = append(sortedLines, lines[i])
+		// 	// break
+		// }
+		
+
+		// for j := range sortedLines {
+		// 	if lines[i] < sortedLines[j] {
+		// 		sortedLines = append([]string{lines[i]}, sortedLines...)
+		// 	} else {
+		// 		sortedLines = append(sortedLines, lines[i])
+		// 	}
+		// }
+	}
+	fmt.Println(sortedLines)
+	// for _, line := range lines {
+	// 	for _, sortedLine := range sortedLines {
+	// 		if line < sortedLine 
+	// 	}
+	// }
+
+}
+
+func wc(path string) {
+	file1, err := os.Open(path)
+	file2, err := os.Open(path)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer file1.Close()
+
+	scanner := bufio.NewScanner(file1)
+
+	wordCount := 0
+	lineCount := 0
+	charCount := 0
+	for scanner.Scan() {
+		line := scanner.Text()
+		lineSlice := strings.Split(line, " ")
+		for _, line := range lineSlice {
+			for range line {
+				charCount++ 
+			}
+		}
+		wordCount += len(lineSlice)
+		lineCount++
+	}
+
+	data := make([]byte, 32*1024)
+	byteCount, err := file2.Read(data)
+	if err != nil {
+		log.Fatal(err)
+	}
+	
+
+	fmt.Printf("%d %d %d %d\n", lineCount, byteCount, wordCount, charCount)
 }
 
 
@@ -83,9 +209,9 @@ func main() {
 		searchPath := args[2]
 		grep(searchValue, searchPath)
 	case "less":
-		break 
+		less(args[1])
 	case "sort":
-		break
+		sort(args[1])
 	case "tail": 
 		break
 	case "wc": 
