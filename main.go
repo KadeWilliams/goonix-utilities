@@ -166,25 +166,24 @@ func tail(path string) {
 	}
 	defer f.Close()
 
+	const maxLines = 10
+	ringBuffer := make([]string, maxLines)
+
+	index := 0
 	scanner := bufio.NewScanner(f)
-
-	lines := []string{}
 	for scanner.Scan() {
-		text := scanner.Text()
-		lines = append(lines, text)
+		ringBuffer[index] = scanner.Text()
+		index = (index + 1) % maxLines
+	}
+	if err := scanner.Err(); err != nil {
+		panic(err)
 	}
 
-	counter := 0
-	output := []string{}
-	for i := len(lines)-1; i >= 0; i-- {
-		if counter == 10 {
-			break
+	for i := 0; i < maxLines; i++ {
+		line := ringBuffer[(index+i)%maxLines]
+		if line != "" {
+			fmt.Println(line)
 		}
-		output = append([]string{lines[i]},output... )
-		counter++
-	}
-	for _, line := range output {
-		fmt.Println(line)
 	}
 }
 
