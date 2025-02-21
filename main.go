@@ -6,7 +6,6 @@ import (
 	"log"
 	"os"
 	"os/exec"
-	"slices"
 	"strings"
 )
 
@@ -26,9 +25,9 @@ func ls(path string) {
 		path, _ = os.Getwd()
 	}
 	if files, err := os.ReadDir(path); err == nil {
-		fmt.Println(files)
+		fmt.Println("IsDirectory\tObject Name")
 		for _, file := range files {
-			fmt.Printf("%s %v\n",file.Name(), file.IsDir())
+			fmt.Printf("%v\t\t%s\n", file.IsDir(), file.Name())
 		}
 	}
 }
@@ -39,11 +38,13 @@ func grep(value, path string) {
 
 	scanner := bufio.NewScanner(f);
 
+	line := 1
 	for scanner.Scan() {
-		line := scanner.Text()
-		if strings.Contains(line, value) {
-			fmt.Println(line)
+		text := scanner.Text()
+		if strings.Contains(text, value) {
+			fmt.Printf("[line %d] %s\n", line, text)
 		}
+		line++
 	}
 }
 
@@ -111,71 +112,16 @@ func sort(path string) {
 		lines = append(lines, scanner.Text())
 	}
 
-	sortedLines := []string{}
-
 	for i := range lines {
-		fmt.Printf("Outer: %s\n", lines[i])
-		if len(sortedLines) == 0 {
-			sortedLines = append(sortedLines, lines[i])
-			continue
-		}
-
 		for j := range lines {
-			fmt.Printf("\tInner:%s\n", lines[j])
-
 			if lines[i] < lines[j] {
-				fmt.Printf("\nInserted %s @ %d", lines[i], j)
-				sortedLines = slices.Insert(sortedLines, j, lines[i])
+				flipVal := lines[i]
+				lines[i] = lines[j]
+				lines[j] = flipVal
 			}
-
-			/*
-				if outer <= inner 
-					insert at current index of outer int sorted
-				else if outer > inner 
-					continue the loop
-			*/
 		}
-		
-
-		// if len(sortedLines) < 1 {
-		// 	sortedLines = append(sortedLines, lines[i])
-		// 	continue
-		// }
-
-		// // TODO need to make it work when the characters are the same in pos 1 
-		// for j := range sortedLines {
-		// 	fmt.Printf("comparing %s to %s\n", lines[i], sortedLines[j])
-		// 	if sortedLines[j] > lines[i] {
-		// 		fmt.Printf("Inserting %s @ %d\n", lines[j], j)
-		// 		sortedLines = slices.Insert(sortedLines, j, lines[j])
-		// 		// sortedLines = append([]string{lines[i]}, sortedLines...)
-		// 		// continue
-		// 	} else {
-		// 		fmt.Printf("Inserting %s @ %d\n", lines[i], i)
-		// 		sortedLines = slices.Insert(sortedLines, i, lines[i])
-		// 		break
-		// 	}
-		// 	// fmt.Printf("Appending %s\n", lines[i])
-		// 	// sortedLines = append(sortedLines, lines[i])
-		// 	// break
-		// }
-		
-
-		// for j := range sortedLines {
-		// 	if lines[i] < sortedLines[j] {
-		// 		sortedLines = append([]string{lines[i]}, sortedLines...)
-		// 	} else {
-		// 		sortedLines = append(sortedLines, lines[i])
-		// 	}
-		// }
 	}
-	fmt.Println(sortedLines)
-	// for _, line := range lines {
-	// 	for _, sortedLine := range sortedLines {
-	// 		if line < sortedLine 
-	// 	}
-	// }
-
+	fmt.Println(lines)
 }
 
 func wc(path string) {
@@ -213,6 +159,34 @@ func wc(path string) {
 	fmt.Printf("%d %d %d %d\n", lineCount, byteCount, wordCount, charCount)
 }
 
+func tail(path string) {
+	f, err := os.Open(path)
+	if err != nil {
+		panic(err)
+	}
+	defer f.Close()
+
+	scanner := bufio.NewScanner(f)
+
+	lines := []string{}
+	for scanner.Scan() {
+		text := scanner.Text()
+		lines = append(lines, text)
+	}
+
+	counter := 0
+	output := []string{}
+	for i := len(lines)-1; i >= 0; i-- {
+		if counter == 10 {
+			break
+		}
+		output = append([]string{lines[i]},output... )
+		counter++
+	}
+	for _, line := range output {
+		fmt.Println(line)
+	}
+}
 
 func main() {
 	args := os.Args[1:]
@@ -231,7 +205,7 @@ func main() {
 	case "sort":
 		sort(args[1])
 	case "tail": 
-		break
+		tail(args[1])
 	case "wc": 
 		wc(args[1])
 	}
